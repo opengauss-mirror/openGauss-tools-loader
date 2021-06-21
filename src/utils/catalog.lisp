@@ -52,7 +52,7 @@
            ;; field is for SOURCE
            ;; column is for TARGET
            ;; citus is an extra slot for citus support
-           field-list column-list index-list fkey-list trigger-list citus-rule)
+           field-list column-list index-list fkey-list trigger-list citus-rule partition-list)
 
 (defstruct matview source-name name schema definition)
 
@@ -83,6 +83,8 @@
 (defstruct fkey
   name oid table columns pkey foreign-table foreign-columns condef
   update-rule delete-rule match-rule deferrable initially-deferred)
+
+(defstruct partition submethod name method expression description schema)
 
 ;;;
 ;;; An index, that might be underlying a e.g. UNIQUE constraint conname, in
@@ -117,6 +119,7 @@
 (defgeneric add-index     (object index &key))
 (defgeneric add-fkey      (object fkey &key))
 (defgeneric add-comment   (object comment &key))
+(defgeneric add-partition (object partition &key))
 
 (defgeneric extension-list (object &key)
   (:documentation "Return the list of extensions found in OBJECT."))
@@ -146,6 +149,10 @@
 (defgeneric find-index (object index-name &key key test)
   (:documentation
    "Find an index by INDEX-NAME in a table OBJECT and return the index"))
+
+(defgeneric find-partition (object partition-name &key key test)
+  (:documentation
+   "Find a partition by PARTITION-NAME in a table OBJECT and return the partition"))
 
 (defgeneric find-fkey (object fkey-name &key key test)
   (:documentation
@@ -387,6 +394,14 @@
 ;;; fkey queries return a row per index|fkey column rather than per
 ;;; index|fkey. Hence this extra API:
 ;;;
+(defmethod add-partition ((table table) partition &key)
+  "Add PARTITION to TABLE and return the TABLE."
+  (push-to-end partition (table-partition-list table)))
+
+(defmethod find-partition ((table table) partition-name &key key (test #'string=))
+  "Find PARTITION-NAME in TABLE and return the PARTITION object of this name."
+  (find partition-name (table-partition-list table) :key key :test test))
+
 (defmethod add-index ((table table) index &key)
   "Add INDEX to TABLE and return the TABLE."
   (push-to-end index (table-index-list table)))
