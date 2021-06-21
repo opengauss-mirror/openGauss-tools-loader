@@ -105,18 +105,26 @@
                                       "integer" "bigint" "character varying" "text" "character" "numeric" "date" 
                                       "time without time zone" "timestamp without time zone" "time" "timestamp"
                                       "bpchar" "nchar" "decimal"))
+
             (defparameter first-part (if (table-partition-list table) (first (table-partition-list table)) NIL))
             (defparameter is-skip NIL)
+
             (when (and first-part (partition-method first-part))
+                ;; If the current partition contains a SubPartition,
+                ;; treat it as a normal Partition and issue a warning
                 (when (partition-submethod first-part)
                   (log-message :warning
                                       "~a.~a is a composite partition table, ignore subpartition"
                                       (schema-name (partition-schema first-part)) (table-name table)))
+
                 (defparameter max-key-count 4)
                 (defparameter key-count 0)
                 (defparameter column-count (length (table-column-list table)))
                 (defparameter partition-column-list (string-split (remove #\` (partition-expression first-part)) #\,))
                 (setf key-count (length partition-column-list))
+
+
+                ;; Verify the validity of the number of partition keys
                 (when (or
                         (> key-count max-key-count)
                         (and (> key-count 1) (string= "RANGE COLUMNS" (partition-method first-part))))
@@ -124,8 +132,10 @@
                                       "~a.~a's partition key num(~d) exceed max value(~d), create as normal table"
                                       (schema-name (partition-schema first-part))
                                         (table-name table) key-count max-key-count)
-                  (setf is-skip 1)
-                )
+                  (setf is-skip 1))
+
+                ;; When partition_method is "KEY" or "LINER KEY", the type of the KEY is validated.
+                ;; The whitelist of the type is white-list, as defined above
                 (when (and 
                         (not is-skip)
                         (or (string= (partition-method first-part) "KEY")
@@ -148,8 +158,9 @@
                               :always is-skip
                               :do (progn
                                 (when (string= (column-type-name column) white-type)
-                                  (setf is-skip NIL)))))))))
-                  )
+                                  (setf is-skip NIL))))))))))
+
+                  ;; Initializes the corresponding statement based on the obtained partition information
                   (defparameter statement "")
                   (unless is-skip
                     (setf statement (concatenate 'string statement " PARTITION BY "))
@@ -167,12 +178,11 @@
                           (setf is-skip 1)
                           (log-message :warning "Unknown partition type")
                           (log-message :warning "Unknown partition type: ~s, create this table(~s.~s) as non-part table"
-                                                (partition-method first-part) (partition-schema partition) (table-name table))))
-                    ))
+                                                (partition-method first-part) (partition-schema partition) (table-name table))))))
+
                     (unless is-skip 
                       (setf statement
-                            (concatenate 'string statement (format nil "(~a) (" (remove #\` (partition-expression first-part)))))
-                    )
+                            (concatenate 'string statement (format nil "(~a) (" (remove #\` (partition-expression first-part))))))
 
                     (loop
                       :for partition
@@ -206,10 +216,10 @@
                               (log-message :warning "Unknown partition type")
                               (log-message :warning "Unknown partition type: ~s, create this table(~s.~s) as non-part table"
                                                     (partition-method first-part) (partition-schema partition) (table-name table)))))))
-                    (unless is-skip 
-                      (format s "~a)" statement)
-                    )
-            )
+
+                    ;; Append the statement after the constructor sentence
+                    (unless is-skip (format s "~a)" statement)))
+
             (when (table-tablespace table)
               (format s "~%TABLESPACE ~a" (table-tablespace table)))
 
