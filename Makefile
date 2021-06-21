@@ -72,24 +72,10 @@ all: $(PGLOADER)
 clean:
 	rm -rf $(LIBS) $(QLDIR) $(MANIFEST) $(BUILDAPP) $(PGLOADER) docs/_build
 
-$(QLDIR)/local-projects/qmynd:
-	git clone --depth 1 https://github.com/qitab/qmynd.git $@
-
-$(QLDIR)/local-projects/cl-ixf:
-	git clone --depth 1 https://github.com/dimitri/cl-ixf.git $@
-
-$(QLDIR)/local-projects/cl-db3:
-	git clone --depth 1 https://github.com/dimitri/cl-db3.git $@
-
-$(QLDIR)/local-projects/cl-csv:
-	git clone --depth 1 https://github.com/AccelerationNet/cl-csv.git $@
-
 $(QLDIR)/setup.lisp:
-	mkdir -p $(BUILDDIR)
-	curl -o $(BUILDDIR)/quicklisp.lisp http://beta.quicklisp.org/quicklisp.lisp
+	tar -zxf $(BUILDDIR)/offline_packge.tar.gz -C $(BUILDDIR)/
 	$(CL) $(CL_OPTS) --load $(BUILDDIR)/quicklisp.lisp                        \
              --load src/getenv.lisp                                               \
-             --eval '(quicklisp-quickstart:install :path "$(BUILDDIR)/quicklisp" :proxy (getenv "http_proxy"))' \
              --eval '(quit)'
 
 quicklisp: $(QLDIR)/setup.lisp ;
@@ -227,7 +213,7 @@ deb:
 rpm:
 	# intended for use on a CentOS or other RPM based system
 	mkdir -p $(DEBUILD_ROOT) && rm -rf $(DEBUILD_ROOT)
-	rsync -Ca --exclude=build/* ./ $(DEBUILD_ROOT)/
+	rsync -Ca ./ $(DEBUILD_ROOT)/
 	cd /tmp && tar czf $(HOME)/rpmbuild/SOURCES/pgloader-$(VERSION).tar.gz pgloader
 	cd $(DEBUILD_ROOT) && rpmbuild -ba pgloader.spec
 	cp -a $(HOME)/rpmbuild/SRPMS/*rpm build

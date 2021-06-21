@@ -1,11 +1,10 @@
 Summary:            extract, transform and load data into PostgreSQL
 Name:               pgloader
-Version:            3.6.1
+Version:            3.6.2
 Release:            22%{?dist}
 License:            The PostgreSQL Licence
 Group:              System Environment/Base
-URL:                https://github.com/dimitri/pgloader
-Source0:            %{url}/archive/v%{version}.tar.gz
+Source0:            pgloader-%{version}.tar.gz
 
 BuildRequires: sbcl
 BuildRequires: freetds-devel
@@ -31,7 +30,7 @@ PostgreSQL. In the MySQL case it's possible to edit CASTing rules from the
 pgloader command directly.
 
 %prep
-%setup -q -n %{name}-%{version}
+%setup -q -n %{name}
 
 %build
 %define debug_package %{nil}
