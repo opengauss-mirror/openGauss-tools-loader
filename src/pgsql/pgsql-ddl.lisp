@@ -108,6 +108,10 @@
             (defparameter first-part (if (table-partition-list table) (first (table-partition-list table)) NIL))
             (defparameter is-skip NIL)
             (when (and first-part (partition-method first-part))
+                (when (partition-submethod first-part)
+                  (log-message :warning
+                                      "~a.~a is a composite partition table, ignore subpartition"
+                                      (schema-name (partition-schema first-part)) (table-name table)))
                 (defparameter max-key-count 4)
                 (defparameter key-count 0)
                 (defparameter column-count (length (table-column-list table)))
