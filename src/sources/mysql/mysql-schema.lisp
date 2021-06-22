@@ -113,6 +113,28 @@
      (return schema)))
 
 ;;;
+;;; MySQL Partitions
+;;;
+(defmethod fetch-partitions ((schema schema) (mysql copy-mysql)
+                          &key including excluding)
+  "Get the list of MySQL partition per table."
+  (loop
+     :for (table-name submethod name method expression description)
+     :in (mysql-query (sql "/mysql/list-all-partitions.sql"
+                           (db-name *connection*)))
+     :do (let* ((table (find-table schema table-name))
+                (partition
+                 (make-partition :name name ; further processing is needed
+                                 :schema schema
+                                 :submethod submethod
+                                 :method method
+                                 :expression expression
+                                 :description description)))
+           (add-partition table partition))
+     :finally
+     (return schema)))
+
+;;;
 ;;; MySQL Foreign Keys
 ;;;
 (defmethod fetch-foreign-keys ((schema schema)

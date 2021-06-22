@@ -164,7 +164,10 @@ Illegal ~a character starting at position ~a~@[: ~a~].~%"
         (fetch-columns schema mysql
                        :including including
                        :excluding excluding)
-
+        ;; fetch partition metadata
+        (fetch-partitions schema mysql
+                         :including including
+                         :excluding excluding)
         ;; fetch view (and their columns) metadata, covering comments too
         (let* ((view-names (unless (eq :all materialize-views)
                              (mapcar #'matview-source-name materialize-views)))

@@ -58,6 +58,7 @@
            #:fkey
            #:trigger
            #:procedure
+           #:partition
 
            #:cast                       ; generic function for sources
 
@@ -74,6 +75,7 @@
            #:make-fkey
            #:make-trigger
            #:make-procedure
+           #:make-partition
 
            #:catalog-name
            #:catalog-schema-list
@@ -102,6 +104,7 @@
            #:table-fkey-list
            #:table-trigger-list
            #:table-citus-rule
+           #:table-partition-list
 
            #:matview-name
            #:matview-source-name
@@ -141,6 +144,13 @@
            #:index-condef
            #:index-filter
            #:index-fk-deps
+
+           #:partition-name
+           #:partition-method
+           #:partition-expression
+           #:partition-schema
+           #:partition-description
+           #:partition-submethod
 
            #:fkey-name
            #:fkey-oid
@@ -189,6 +199,8 @@
            #:add-index
            #:find-index
            #:maybe-add-index
+           #:add-partition
+           #:find-partition
            #:add-fkey
            #:find-fkey
            #:maybe-add-fkey
@@ -570,6 +582,7 @@
            #:fetch-columns
            #:fetch-indexes
            #:fetch-foreign-keys
+           #:fetch-partitions
            #:fetch-comments
            #:get-column-sql-expression
            #:get-column-list

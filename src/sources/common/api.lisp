@@ -147,6 +147,9 @@
   (:documentation
    "Get the list of schema, tables and columns from the source database."))
 
+(defgeneric fetch-partitions (catalog db-copy &key including excluding)
+  (:documentation "Get the list of partitions from the source database."))
+
 (defgeneric fetch-indexes (catalog db-copy &key including excluding)
   (:documentation "Get the list of indexes from the source database."))
 

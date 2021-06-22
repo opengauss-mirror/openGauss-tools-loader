@@ -56,6 +56,16 @@
           (extension-name extension)
           cascade))
 
+;;;
+;;; My Spilit Function
+;;;
+(defun string-split (str delim &optional (start 0))
+  (let ((p1 (position delim str :start start :test #'char/=)))
+    (if p1
+        (let ((p2 (position delim str :start p1)))
+          (cons (subseq str p1 p2)
+                (if p2 (string-split str delim p2) nil)))
+      nil)))
 
 
 ;;;
@@ -91,6 +101,124 @@
               (format s "~%WITH (~{~a = '~a'~^,~%     ~})"
                       (alexandria:alist-plist
                        (table-storage-parameter-list table))))
+            (defparameter white-list (list
+                                      "integer" "bigint" "character varying" "text" "character" "numeric" "date" 
+                                      "time without time zone" "timestamp without time zone" "time" "timestamp"
+                                      "bpchar" "nchar" "decimal"))
+
+            (defparameter first-part (if (table-partition-list table) (first (table-partition-list table)) NIL))
+            (defparameter is-skip NIL)
+
+            (when (and first-part (partition-method first-part))
+                ;; If the current partition contains a SubPartition,
+                ;; treat it as a normal Partition and issue a warning
+                (when (partition-submethod first-part)
+                  (log-message :warning
+                                      "~a.~a is a composite partition table, ignore subpartition"
+                                      (schema-name (partition-schema first-part)) (table-name table)))
+
+                (defparameter max-key-count 4)
+                (defparameter key-count 0)
+                (defparameter column-count (length (table-column-list table)))
+                (defparameter partition-column-list (string-split (remove #\` (partition-expression first-part)) #\,))
+                (setf key-count (length partition-column-list))
+
+
+                ;; Verify the validity of the number of partition keys
+                (when (or
+                        (> key-count max-key-count)
+                        (and (> key-count 1) (string= "RANGE COLUMNS" (partition-method first-part))))
+                  (log-message :warning
+                                      "~a.~a's partition key num(~d) exceed max value(~d), create as normal table"
+                                      (schema-name (partition-schema first-part))
+                                        (table-name table) key-count max-key-count)
+                  (setf is-skip 1))
+
+                ;; When partition_method is "KEY" or "LINER KEY", the type of the KEY is validated.
+                ;; The whitelist of the type is white-list, as defined above
+                (when (and 
+                        (not is-skip)
+                        (or (string= (partition-method first-part) "KEY")
+                            (string= (partition-method first-part) "LINEAR KEY")))
+                  (setf is-skip 1)
+                  (loop
+                    :for partition-key-name
+                    :in partition-column-list
+                    :always is-skip
+                    :do (progn
+                      (loop
+                        :for column
+                        :in (table-column-list table)
+                        :always is-skip
+                        :do (progn
+                          (when (string= (column-name column) partition-key-name)
+                            (loop
+                              :for white-type
+                              :in white-list
+                              :always is-skip
+                              :do (progn
+                                (when (string= (column-type-name column) white-type)
+                                  (setf is-skip NIL))))))))))
+
+                  ;; Initializes the corresponding statement based on the obtained partition information
+                  (defparameter statement "")
+                  (unless is-skip
+                    (setf statement (concatenate 'string statement " PARTITION BY "))
+                    (cond
+                      ((or (string= (partition-method first-part) "RANGE") (string= (partition-method first-part) "RANGE COLUMNS"))
+                        (setf statement (concatenate 'string statement "RANGE")))
+                      ((or (string= (partition-method first-part) "LIST") (string= (partition-method first-part) "LIST COLUMNS"))
+                        (setf statement (concatenate 'string statement "LIST")))
+                      ((or (string= (partition-method first-part) "HASH") (string= (partition-method first-part) "LINEAR HASH"))
+                        (setf statement (concatenate 'string statement "HASH")))
+                      ((or (string= (partition-method first-part) "KEY") (string= (partition-method first-part) "LINEAR KEY"))
+                        (setf statement (concatenate 'string statement "HASH")))
+                      (t
+                        (progn
+                          (setf is-skip 1)
+                          (log-message :warning "Unknown partition type")
+                          (log-message :warning "Unknown partition type: ~s, create this table(~s.~s) as non-part table"
+                                                (partition-method first-part) (partition-schema partition) (table-name table))))))
+
+                    (unless is-skip 
+                      (setf statement
+                            (concatenate 'string statement (format nil "(~a) (" (remove #\` (partition-expression first-part))))))
+
+                    (loop
+                      :for partition
+                      :in (table-partition-list table)
+                      :never is-skip
+                      :do (progn
+                        (cond
+                          ((or (string= (partition-method first-part) "RANGE") (string= (partition-method first-part) "RANGE COLUMNS"))
+                            (setf statement 
+                              (concatenate 'string statement 
+                                (format nil " partition ~a values less than(~a) "
+                                  (remove #\` (partition-name partition)) (partition-description partition)))))
+                          ((or (string= (partition-method first-part) "LIST") (string= (partition-method first-part) "LIST COLUMNS"))
+                            (setf statement 
+                              (concatenate 'string statement 
+                                (format nil " partition ~a values(~a) "
+                                  (remove #\` (partition-name partition)) (partition-description partition)))))
+                          ((or (string= (partition-method first-part) "HASH") (string= (partition-method first-part) "LINEAR HASH"))
+                            (setf statement 
+                              (concatenate 'string statement 
+                                (format nil " partition ~a "
+                                  (remove #\` (partition-name partition))))))
+                          ((or (string= (partition-method first-part) "KEY") (string= (partition-method first-part) "LINEAR KEY"))
+                            (setf statement 
+                              (concatenate 'string statement 
+                                (format nil " partition ~a "
+                                  (remove #\` (partition-name partition))))))
+                          (t
+                            (progn
+                              (setf is-skip 1)
+                              (log-message :warning "Unknown partition type")
+                              (log-message :warning "Unknown partition type: ~s, create this table(~s.~s) as non-part table"
+                                                    (partition-method first-part) (partition-schema partition) (table-name table)))))))
+
+                    ;; Append the statement after the constructor sentence
+                    (unless is-skip (format s "~a)" statement)))
 
             (when (table-tablespace table)
               (format s "~%TABLESPACE ~a" (table-tablespace table)))
