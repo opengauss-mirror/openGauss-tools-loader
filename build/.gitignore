@@ -3,4 +3,5 @@
 # Except this file
 !bin
 !bundle
+!*.tar.gz
 !.gitignore
