@@ -121,7 +121,11 @@
   (loop
      :for (table-name submethod name method expression description)
      :in (mysql-query (sql "/mysql/list-all-partitions.sql"
-                           (db-name *connection*)))
+                           (db-name *connection*)
+                           including ; do we print the clause?
+                           including
+                           excluding ; do we print the clause?
+                           excluding))
      :do (let* ((table (find-table schema table-name))
                 (partition
                  (make-partition :name name ; further processing is needed

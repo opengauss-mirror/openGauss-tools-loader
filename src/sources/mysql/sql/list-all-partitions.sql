@@ -4,5 +4,7 @@
                   partition_description
     FROM information_schema.partitions
    WHERE table_schema='~a'
+         ~:[~*~;and (~{table_name ~a~^ or ~})~]
+         ~:[~*~;and (~{table_name ~a~^ and ~})~]
 GROUP BY table_name
 ORDER BY partition_ordinal_position;
