@@ -184,6 +184,8 @@
                       (setf statement
                             (concatenate 'string statement (format nil "(~a) (" (remove #\` (partition-expression first-part))))))
 
+                    (defparameter part-count 1)
+                    (defparameter part-len (length (table-partition-list table)))
                     (loop
                       :for partition
                       :in (table-partition-list table)
@@ -193,29 +195,31 @@
                           ((or (string= (partition-method first-part) "RANGE") (string= (partition-method first-part) "RANGE COLUMNS"))
                             (setf statement 
                               (concatenate 'string statement 
-                                (format nil " partition ~a values less than(~a) "
+                                (format nil " partition ~a values less than(~a)"
                                   (remove #\` (partition-name partition)) (partition-description partition)))))
                           ((or (string= (partition-method first-part) "LIST") (string= (partition-method first-part) "LIST COLUMNS"))
                             (setf statement 
                               (concatenate 'string statement 
-                                (format nil " partition ~a values(~a) "
+                                (format nil " partition ~a values(~a)"
                                   (remove #\` (partition-name partition)) (partition-description partition)))))
                           ((or (string= (partition-method first-part) "HASH") (string= (partition-method first-part) "LINEAR HASH"))
                             (setf statement 
                               (concatenate 'string statement 
-                                (format nil " partition ~a "
+                                (format nil " partition ~a"
                                   (remove #\` (partition-name partition))))))
                           ((or (string= (partition-method first-part) "KEY") (string= (partition-method first-part) "LINEAR KEY"))
                             (setf statement 
                               (concatenate 'string statement 
-                                (format nil " partition ~a "
+                                (format nil " partition ~a"
                                   (remove #\` (partition-name partition))))))
                           (t
                             (progn
                               (setf is-skip 1)
-                              (log-message :warning "Unknown partition type")
                               (log-message :warning "Unknown partition type: ~s, create this table(~s.~s) as non-part table"
-                                                    (partition-method first-part) (partition-schema partition) (table-name table)))))))
+                                                    (partition-method first-part) (partition-schema partition) (table-name table)))))
+                        (when (and (not is-skip) (< part-count part-len))
+                          (setf statement (concatenate 'string statement ", "))
+                          (setf part-count (+ part-count 1)))))
 
                     ;; Append the statement after the constructor sentence
                     (unless is-skip (format s "~a)" statement)))
