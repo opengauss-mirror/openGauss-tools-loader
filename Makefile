@@ -213,7 +213,7 @@ deb:
 rpm:
 	# intended for use on a CentOS or other RPM based system
 	mkdir -p $(DEBUILD_ROOT) && rm -rf $(DEBUILD_ROOT)
-	rsync -Ca ./ $(DEBUILD_ROOT)/
+	rsync -Ca --exclude=*.pdf ./ $(DEBUILD_ROOT)/
 	cd /tmp && tar czf $(HOME)/rpmbuild/SOURCES/pgloader-$(VERSION).tar.gz pgloader
 	cd $(DEBUILD_ROOT) && rpmbuild -ba pgloader.spec
 	cp -a $(HOME)/rpmbuild/SRPMS/*rpm build
