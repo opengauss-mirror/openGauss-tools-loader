@@ -1,4 +1,5 @@
   SELECT DISTINCT table_name, subpartition_method, partition_name,
+                  partition_ordinal_position,
                   partition_method,
                   partition_expression,
                   partition_description
