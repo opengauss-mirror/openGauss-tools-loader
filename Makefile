@@ -67,6 +67,8 @@ endif
 
 DEBUILD_ROOT = /tmp/pgloader
 
+ARCH = $(shell uname -m)
+
 all: $(PGLOADER)
 
 clean:
@@ -217,7 +219,7 @@ rpm:
 	cd /tmp && tar czf $(HOME)/rpmbuild/SOURCES/pgloader-$(VERSION).tar.gz pgloader
 	cd $(DEBUILD_ROOT) && rpmbuild -ba pgloader.spec
 	cp -a $(HOME)/rpmbuild/SRPMS/*rpm build
-	cp -a $(HOME)/rpmbuild/RPMS/x86_64/*rpm build
+	cp -a $(HOME)/rpmbuild/RPMS/$(ARCH)/*rpm build
 
 pkg:
 	# intended for use on a MacOSX system
